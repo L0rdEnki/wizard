@@ -132,10 +132,6 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-5 gap-2 mb-6" v-if="orderedPlayers.length > 0">
-              <button v-for="n in (numCards + 1)" :key="n" class="btn btn-sm btn-outline" @click="setBid(orderedPlayers[0], n-1)">{{n-1}}</button>
-          </div>
-
           <button class="btn btn-primary w-full btn-lg shadow-lg" @click="finishBidding">
             Stiche eintragen
           </button>
@@ -143,10 +139,21 @@
 
         <!-- Playing Phase (Entering Tricks) -->
         <div v-if="currentGame.state === 'playing'">
-          <div class="alert shadow-lg mb-4 text-sm" :class="totalTricks === numCards ? 'alert-success' : 'alert-warning'">
+
+          <!-- Bombe Toggle -->
+          <div class="form-control mb-4 bg-base-200 p-3 rounded-lg shadow-sm border border-base-300">
+            <label class="cursor-pointer label">
+              <span class="label-text font-semibold flex items-center gap-2">
+                <span class="text-xl">💣</span> Bombe gespielt (-1 Stich in dieser Runde)
+              </span>
+              <input type="checkbox" class="toggle toggle-error" :checked="currentRoundObj.bombPlayed" @change="toggleBomb" />
+            </label>
+          </div>
+
+          <div class="alert shadow-lg mb-4 text-sm" :class="totalTricks === expectedTricks ? 'alert-success' : 'alert-warning'">
             <div>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-              <span>Verteilt: {{ totalTricks }} / {{ numCards }}</span>
+              <span>Verteilt: {{ totalTricks }} / {{ expectedTricks }}</span>
             </div>
           </div>
 
@@ -169,10 +176,35 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
               Wolke
             </button>
-            <button class="btn btn-primary flex-grow" @click="finishRound" :disabled="totalTricks !== numCards">
+            <button class="btn btn-primary flex-grow" @click="finishRound" :disabled="totalTricks !== expectedTricks">
               Runde auswerten
             </button>
           </div>
+        </div>
+
+        <!-- Cloud Edit Phase (Editing Bids) -->
+        <div v-if="currentGame.state === 'cloud'">
+          <div class="alert alert-warning shadow-lg mb-4 text-sm">
+            <div>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>Wolke aktiv: Tipps können hier jeweils um +/- 1 angepasst werden.</span>
+            </div>
+          </div>
+
+          <div class="space-y-3 mb-6">
+            <div v-for="player in orderedPlayers" :key="player" class="flex items-center justify-between p-3 bg-base-200 rounded-lg shadow-sm border border-base-300">
+              <span class="font-semibold text-lg w-1/3 truncate">{{ player }}</span>
+              <div class="flex items-center gap-3">
+                <button class="btn btn-circle btn-sm btn-outline" @click="cloudDecrement(player)">-</button>
+                <div class="text-2xl font-bold w-8 text-center">{{ currentRoundObj.bids[player] }}</div>
+                <button class="btn btn-circle btn-sm btn-outline" @click="cloudIncrement(player)">+</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-outline w-full shadow-lg" @click="finishCloudEdit">
+            Abbrechen
+          </button>
         </div>
       </div>
 

@@ -135,7 +135,8 @@ const app = createApp({
       newGame.rounds.push({
         roundNum: 1,
         bids: {},
-        tricks: {}
+        tricks: {},
+        bombPlayed: false
       });
 
       currentGame.value = newGame;
@@ -176,6 +177,17 @@ const app = createApp({
       if (!currentRoundObj.value) return 0;
       return Object.values(currentRoundObj.value.tricks).reduce((a, b) => a + (b || 0), 0);
     });
+
+    const expectedTricks = computed(() => {
+      if (!currentRoundObj.value) return 0;
+      return currentRoundObj.value.bombPlayed ? numCards.value - 1 : numCards.value;
+    });
+
+    const toggleBomb = () => {
+      if (currentRoundObj.value) {
+        currentRoundObj.value.bombPlayed = !currentRoundObj.value.bombPlayed;
+      }
+    };
 
     // Game Actions
     const incrementBid = (player) => {
@@ -218,7 +230,7 @@ const app = createApp({
     };
 
     const incrementTrick = (player) => {
-      if (totalTricks.value < numCards.value) {
+      if (totalTricks.value < expectedTricks.value) {
         currentRoundObj.value.tricks[player]++;
       }
     };
@@ -230,13 +242,32 @@ const app = createApp({
     };
 
     const editBids = () => {
-      // Wolke funktion - back to bidding
-      currentGame.value.state = 'bidding';
+      // Wolke funktion - special edit view
+      currentGame.value.state = 'cloud';
+    };
+
+    const cloudIncrement = (player) => {
+      if (currentRoundObj.value.bids[player] < numCards.value) {
+        currentRoundObj.value.bids[player]++;
+        finishCloudEdit();
+      }
+    };
+
+    const cloudDecrement = (player) => {
+      if (currentRoundObj.value.bids[player] > 0) {
+        currentRoundObj.value.bids[player]--;
+        finishCloudEdit();
+      }
+    };
+
+    const finishCloudEdit = () => {
+       currentGame.value.state = 'playing';
+       saveGames();
     };
 
     const finishRound = () => {
-      if (totalTricks.value !== numCards.value) {
-        alert(`Die Summe der Stiche (${totalTricks.value}) muss genau der Anzahl der verteilten Karten (${numCards.value}) entsprechen!`);
+      if (totalTricks.value !== expectedTricks.value) {
+        alert(`Die Summe der Stiche (${totalTricks.value}) muss genau der erwarteten Anzahl an Stichen (${expectedTricks.value}) entsprechen!`);
         return;
       }
 
@@ -273,7 +304,8 @@ const app = createApp({
         currentGame.value.rounds.push({
           roundNum: currentGame.value.currentRound,
           bids: {},
-          tricks: {}
+          tricks: {},
+          bombPlayed: false
         });
         currentView.value = 'score'; // Show score table between rounds
       }
@@ -330,6 +362,8 @@ const app = createApp({
       numCards,
       orderedPlayers,
       totalTricks,
+      expectedTricks,
+      toggleBomb,
       incrementBid,
       decrementBid,
       setBid,
@@ -337,6 +371,9 @@ const app = createApp({
       incrementTrick,
       decrementTrick,
       editBids,
+      cloudIncrement,
+      cloudDecrement,
+      finishCloudEdit,
       finishRound,
       continueToNextRound,
 
