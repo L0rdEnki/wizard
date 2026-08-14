@@ -226,18 +226,12 @@ const app = createApp({
 
     // Game Actions
     const incrementBid = (player) => {
-      if (currentRoundObj.value.bids[player] === undefined) {
-        currentRoundObj.value.bids[player] = 0;
-      }
       if (currentRoundObj.value.bids[player] < numCards.value) {
         currentRoundObj.value.bids[player]++;
       }
     };
 
     const decrementBid = (player) => {
-      if (currentRoundObj.value.bids[player] === undefined) {
-        currentRoundObj.value.bids[player] = 0;
-      }
       if (currentRoundObj.value.bids[player] > 0) {
         currentRoundObj.value.bids[player]--;
       }
