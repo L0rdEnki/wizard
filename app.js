@@ -131,10 +131,13 @@ const app = createApp({
       // Initialize scores
       setupPlayers.value.forEach(p => newGame.totalScores[p] = 0);
 
-      // Initialize first round
+      // Initialize first round bids with 0
+      const initialBids = {};
+      setupPlayers.value.forEach(p => initialBids[p] = 0);
+
       newGame.rounds.push({
         roundNum: 1,
-        bids: {},
+        bids: initialBids,
         tricks: {},
         bombPlayed: false
       });
@@ -301,9 +304,12 @@ const app = createApp({
         currentGame.value.dealerIndex = (currentGame.value.dealerIndex + 1) % players.length;
         currentGame.value.state = 'bidding';
 
+        const nextBids = {};
+        players.forEach(p => nextBids[p] = 0);
+
         currentGame.value.rounds.push({
           roundNum: currentGame.value.currentRound,
-          bids: {},
+          bids: nextBids,
           tricks: {},
           bombPlayed: false
         });
