@@ -93,8 +93,39 @@
           </div>
         </div>
 
-        <button class="btn btn-success w-full" @click="initGame" :disabled="setupPlayers.length < 3 || setupPlayers.length > 6">
-          Spiel starten & Auswürfeln
+        <div v-if="setupPlayers.length >= 3 && setupPlayers.length <= 6" class="mb-6 bg-base-200 p-4 rounded-lg shadow-inner border border-base-300">
+          <label class="cursor-pointer label">
+            <span class="label-text font-bold">Spiel vom Papier fortsetzen?</span>
+            <input type="checkbox" class="toggle toggle-primary" v-model="isPaperResume" />
+          </label>
+
+          <div v-if="isPaperResume" class="mt-4 space-y-4">
+            <div class="form-control">
+              <label class="label"><span class="label-text">Als nächstes dran: Runde</span></label>
+              <input type="number" min="1" :max="60 / setupPlayers.length" v-model="paperRound" class="input input-bordered w-full" />
+            </div>
+
+            <div class="form-control">
+              <label class="label"><span class="label-text">Als nächstes teilt aus</span></label>
+              <select v-model="paperDealerIndex" class="select select-bordered w-full">
+                <option v-for="(player, index) in setupPlayers" :key="index" :value="index">{{ player }}</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="label"><span class="label-text font-semibold">Bisherige Punkte</span></label>
+              <div class="grid grid-cols-2 gap-2">
+                <div v-for="player in setupPlayers" :key="player" class="form-control">
+                  <label class="label pb-1"><span class="label-text text-xs">{{ player }}</span></label>
+                  <input type="number" v-model="paperScores[player]" class="input input-bordered input-sm" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn w-full shadow-lg" :class="isPaperResume ? 'btn-secondary' : 'btn-success'" @click="initGame" :disabled="setupPlayers.length < 3 || setupPlayers.length > 6">
+          {{ isPaperResume ? 'Spiel an dieser Stelle fortsetzen' : 'Spiel starten & Auswürfeln' }}
         </button>
       </div>
 

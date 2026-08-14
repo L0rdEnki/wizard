@@ -93,17 +93,35 @@ const app = createApp({
     const newPlayerName = ref('');
     const setupPlayers = ref([]);
 
+    // Paper Resume State
+    const isPaperResume = ref(false);
+    const paperRound = ref(1);
+    const paperDealerIndex = ref(0);
+    const paperScores = ref({});
+
     const addPlayer = () => {
       const name = newPlayerName.value.trim();
       if (name && !setupPlayers.value.includes(name)) {
         setupPlayers.value.push(name);
+        paperScores.value[name] = 0; // Initialize score for paper resume
         newPlayerName.value = '';
       }
     };
 
     const removePlayer = (index) => {
+      const name = setupPlayers.value[index];
+      delete paperScores.value[name];
       setupPlayers.value.splice(index, 1);
     };
+
+    // Make sure paper round is valid
+    watch([paperRound, setupPlayers], () => {
+        if (setupPlayers.value.length > 0) {
+            const maxRounds = 60 / setupPlayers.value.length;
+            if (paperRound.value > maxRounds) paperRound.value = maxRounds;
+            if (paperRound.value < 1) paperRound.value = 1;
+        }
+    }, { deep: true });
 
     const initGame = () => {
       if (setupPlayers.value.length < 3 || setupPlayers.value.length > 6) {
@@ -111,42 +129,56 @@ const app = createApp({
         return;
       }
 
-      // Random starting dealer
-      const startingDealerIndex = Math.floor(Math.random() * setupPlayers.value.length);
       const totalRounds = 60 / setupPlayers.value.length;
+
+      let startRound = 1;
+      let dealerIdx = Math.floor(Math.random() * setupPlayers.value.length);
+
+      if (isPaperResume.value) {
+          startRound = parseInt(paperRound.value);
+          dealerIdx = parseInt(paperDealerIndex.value);
+      }
 
       const newGame = {
         id: Date.now().toString(),
-        name: `Spiel vom ${formatDate(Date.now())}`,
+        name: isPaperResume.value ? `Fortgesetzt vom ${formatDate(Date.now())}` : `Spiel vom ${formatDate(Date.now())}`,
         timestamp: Date.now(),
         players: [...setupPlayers.value],
         totalRounds: totalRounds,
-        currentRound: 1,
-        dealerIndex: startingDealerIndex,
+        currentRound: startRound,
+        dealerIndex: dealerIdx,
         state: 'bidding', // 'bidding', 'playing', 'finished'
-        rounds: [], // Array of objects { roundNum, bids: { player: bid }, tricks: { player: tricks }, scores: { player: score } }
+        rounds: [],
         totalScores: {}
       };
 
       // Initialize scores
-      setupPlayers.value.forEach(p => newGame.totalScores[p] = 0);
+      setupPlayers.value.forEach(p => {
+          newGame.totalScores[p] = isPaperResume.value ? (parseInt(paperScores.value[p]) || 0) : 0;
+      });
 
       // Initialize first round bids with 0
       const initialBids = {};
       setupPlayers.value.forEach(p => initialBids[p] = 0);
 
-      newGame.rounds.push({
-        roundNum: 1,
+      newGame.rounds[startRound - 1] = {
+        roundNum: startRound,
         bids: initialBids,
         tricks: {},
         bombPlayed: false
-      });
+      };
 
       currentGame.value = newGame;
       games.value.push(newGame);
       saveGames();
 
-      setupPlayers.value = []; // reset
+      // Reset setup state
+      setupPlayers.value = [];
+      isPaperResume.value = false;
+      paperRound.value = 1;
+      paperDealerIndex.value = 0;
+      paperScores.value = {};
+
       currentView.value = 'game';
     };
 
@@ -398,6 +430,10 @@ const app = createApp({
 
       newPlayerName,
       setupPlayers,
+      isPaperResume,
+      paperRound,
+      paperDealerIndex,
+      paperScores,
       addPlayer,
       removePlayer,
       initGame
