@@ -1,0 +1,42 @@
+/* Prevent double-tap zoom on iOS */
+body {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in inputs */
+input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Smooth transitions for theme toggle */
+html {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Hide scrollbar for clean app-like look */
+::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* Confetti Animation */
+.confetti {
+  width: 10px;
+  height: 10px;
+  background-color: var(--color);
+  position: absolute;
+  top: -10px;
+  left: var(--x);
+  animation: fall 3s linear infinite;
+  animation-delay: var(--delay);
+  border-radius: 2px;
+}
+
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}

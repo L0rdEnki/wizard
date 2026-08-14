@@ -1,0 +1,22 @@
+{
+  "name": "Wizard Punkte-Tracker",
+  "short_name": "Wizard PWA",
+  "description": "Digitaler Punkte-Tracker für das Kartenspiel Wizard.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1d232a",
+  "theme_color": "#1d232a",
+  "icons": [
+    {
+      "src": "https://www.amigo-spiele.de/wp-content/uploads/2020/09/01901_Wizard_Logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://www.amigo-spiele.de/wp-content/uploads/2020/09/01901_Wizard_Logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
