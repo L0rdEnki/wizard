@@ -1,13 +1,13 @@
 {
   "name": "wizard-tracker",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "description": "Punkte-Tracker (PWA) für das Kartenspiel Wizard",
+  "type": "module",
   "scripts": {
-    "wizard": "npx http-server -p 8000"
+    "wizard": "npx http-server -p 8000 -c-1",
+    "test": "node --test tests/"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
   "devDependencies": {
     "http-server": "^14.1.1"

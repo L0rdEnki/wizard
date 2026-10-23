@@ -1,62 +1,50 @@
 # Wizard PWA - Punkte-Tracker
 
-Dies ist eine Progressive Web App (PWA) zur digitalen Erfassung der Punkte beim Kartenspiel "Wizard". Sie ist "mobile-first" für das iPhone optimiert, verwendet Vue 3 (für die Logik), Tailwind CSS & daisyUI (für das Styling) und speichert die Daten lokal im Browser (localStorage).
+Progressive Web App zum Mitschreiben der Punkte beim Kartenspiel „Wizard“. Mobile-first, ohne Build-Schritt: Vue 3 (Logik), Tailwind CSS & daisyUI (Styling) über CDN, Speicherung lokal im Browser (localStorage).
 
 ## Funktionen
-- **Startbildschirm**: Übersicht aktiver Spiele, Starten neuer Spiele.
-- **Spiel-Setup**: Eingabe von 3-6 Spielern, automatisches Auswürfeln des Startgebers.
-- **Spiel-Loop**:
-  - Eingabe der Tipps und tatsächlichen Stiche mit großen, touch-optimierten (+/-) Buttons.
-  - "Wolke"-Funktion: Tipps in der laufenden Runde nachträglich ändern.
-  - Automatische Validierung (Summe Stiche = ausgeteilte Karten).
-  - Score-Tabelle nach jeder Runde.
-- **Spielende**: Ranking, Sieger-Hervorhebung, Konfetti-Animation, Revanche-Option.
-- **Offline-fähig**: Dank Service Worker (`sw.js`) und Web-App-Manifest.
-- **Dark/Light Mode**: Anpassbar über den Header.
+- **Übersicht**: laufende und beendete Spiele getrennt, mit Spitzenreiter; Löschen mit Rückfrage.
+- **Spiel-Setup**: 3–6 Spieler in Sitzreihenfolge (sortierbar), Geber wird ausgelost.
+  - Regel **„Tipps dürfen nicht aufgehen“** pro Spiel ein-/ausschaltbar (Standard: an).
+  - **Vom Papier fortsetzen**: Runde, Geber und bisherige Punkte übernehmen.
+- **Punkte immer sichtbar**: Punkteleiste mit Rang und Geber oben in jeder Runde.
+- **Tipps**: Zahlen-Chips pro Spieler, Anzeige über-/unterboten. Bei aktiver Regel wird die verbotene Zahl des letzten Spielers gesperrt und angezeigt („⛔ Anna darf nicht 2 tippen“).
+- **Stiche**: Zahlen-Chips; sind alle bis auf einen eingetragen, bekommt der letzte automatisch den Rest. Bombe (−1 Stich) und Wolke (Tipp ±1, wird vermerkt und ist rückgängig machbar).
+- **Zwischenstand** nach Punkten sortiert, mit Rundenpunkten, Abstand zum Ersten und ausklappbarem Verlauf. „Letzte Runde korrigieren“ öffnet die zuletzt gewertete Runde erneut.
+- **Tischmodus** (Knopf „Tisch“): große Kacheln für alle am Tisch, mit Punkten, Rang, Tipp, Stichen, Geber, „beginnt“ und Verbot. Stiche live mitzählen per Antippen der Kachel. Mit ⇅ wird die obere Reihe für die Gegenübersitzenden um 180° gedreht (Gerät liegt flach). Der Bildschirm bleibt an (Wake Lock, sofern unterstützt).
+- **Spielende**: Ranking, Konfetti, Revanche.
+- **Offline-fähig** dank Service Worker; Dark/Light Mode.
 
-## Testanleitung (Lokales Hosten & Installation auf dem iPhone)
+## Projektstruktur
+```
+index.html       Oberfläche (Vue-Templates)
+js/app.js        Vue-App: Ansichten, Eingaben, Tischmodus
+js/rules.js      reine Spiellogik (Wertung, verbotener Tipp, Migration alter Spielstände)
+style.css        eigene Styles (Chips, Tischmodus, Konfetti)
+sw.js            Service Worker (eigene Dateien network-first, CDN cache-first)
+tests/           Tests für die Spiellogik (node:test)
+```
 
-Da PWAs (und Service Worker) aus Sicherheitsgründen HTTPS erfordern (außer unter `localhost`), gibt es verschiedene Wege, die App lokal auf dem iPhone zu testen.
-
-### Lokales Starten auf Debian (mit npm)
-
-Das Projekt ist so vorbereitet, dass du den lokalen Webserver direkt aus dem Root-Verzeichnis mit folgendem Befehl starten kannst:
-
-\`\`\`bash
+## Lokal starten & testen
+```bash
 npm run wizard
-\`\`\`
-*(Alternativ via Alias: `up run wizard`)*
+```
+Der Server läuft dann unter `http://localhost:8000`.
 
-Der Server ist dann unter `http://localhost:8000` bzw. `http://127.0.0.1:8000` erreichbar.
+```bash
+npm test
+```
 
-### Möglichkeit 1: Lokales Netzwerk & ngrok / localtunnel (Empfohlen)
+### Auf dem iPhone testen
+PWAs bzw. Service Worker brauchen HTTPS (außer auf `localhost`). Den lokalen Server kannst du z. B. so per HTTPS erreichbar machen:
+```bash
+npx localtunnel --port 8000
+```
+Die angezeigte URL in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 
-Um den laufenden lokalen Server auf deinem iPhone zu testen:
-1. **Starte den lokalen Webserver** wie oben beschrieben (`npm run wizard`).
-2. **Mache den Server über HTTPS erreichbar**:
-   Lade dir `ngrok` herunter oder nutze `localtunnel`, um eine öffentliche HTTPS-URL zu generieren:
-   \`\`\`bash
-   # Mit npx localtunnel (kein Account nötig):
-   npx localtunnel --port 8000
-   \`\`\`
-3. Du erhältst eine URL (z.B. `https://xyza-123-45.loca.lt`).
-4. **Auf dem iPhone**:
-   - Öffne **Safari** und rufe die generierte URL auf.
-   - Tippe in Safari unten auf den "Teilen"-Button (das Viereck mit dem Pfeil nach oben).
-   - Wähle **"Zum Home-Bildschirm"** aus.
-   - Nun hast du die Wizard PWA als vollwertige App-Icon auf deinem Homescreen. Sie öffnet sich im Vollbild (Standalone) ohne Safari-Bedienelemente.
+## Hosting auf GitHub Pages
+Alle Dateien liegen im Root und nutzen relative Pfade, ein Build ist nicht nötig. Repository-Einstellungen → Pages → Branch wählen, Ordner `/ (root)`. Die URL in Safari öffnen und „Zum Home-Bildschirm“ hinzufügen.
 
-### Möglichkeit 2: Hosting auf GitHub Pages (Direkt startklar)
-
-Da alle Dateien (`index.html`, `app.js`, etc.) direkt im Hauptverzeichnis (Root) liegen, ist das Repository **sofort bereit für GitHub Pages**.
-1. Lade das Repository auf GitHub hoch.
-2. Gehe in die Repository-Einstellungen unter "Pages".
-3. Wähle als Source den Branch aus (z. B. `main` oder `master`) und den Ordner `/ (root)`.
-4. Du erhältst sofort eine HTTPS-URL (z.B. `https://dein-username.github.io/wizard-pwa`).
-5. Öffne diese URL in Safari auf deinem iPhone und füge sie "Zum Home-Bildschirm" hinzu.
-
-## Technische Details
-- Die iOS-Meta-Tags verhindern das automatische Zoomen beim Tippen (`touch-action: pan-y; user-select: none;` in CSS).
-- Das State-Management ist reaktiv in `app.js` aufgebaut und wird bei Änderungen sofort im `localStorage` gespeichert.
+Bei Änderungen an der App die Version `CACHE_NAME` in `sw.js` erhöhen. Dank network-first kommen Updates aber auch ohne das beim nächsten Öffnen mit Netz an.
 
 Viel Spaß beim Spielen!

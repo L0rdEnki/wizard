@@ -1,44 +1,63 @@
-const CACHE_NAME = 'wizard-pwa-cache-v1';
-const urlsToCache = [
+// Bump on every deploy that changes the precached app shell.
+const CACHE_NAME = 'wizard-pwa-v2';
+
+const APP_SHELL = [
   './',
   './index.html',
-  './app.js',
+  './js/app.js',
+  './js/rules.js',
   './style.css',
-  './manifest.json'
+  './manifest.json',
+  './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
+
+// Versioned CDN files never change, so they are served cache-first.
+const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'unpkg.com'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
-});
-
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
+      .then(cache => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches.keys()
+      .then(names => Promise.all(names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))))
+      .then(() => self.clients.claim())
   );
+});
+
+const putInCache = (request, response) => {
+  if (response.ok || response.type === 'opaque') {
+    const copy = response.clone();
+    caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+  }
+  return response;
+};
+
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+
+  if (CDN_HOSTS.includes(url.hostname)) {
+    event.respondWith(
+      caches.match(request).then(cached => cached || fetch(request).then(response => putInCache(request, response)))
+    );
+    return;
+  }
+
+  if (url.origin === self.location.origin) {
+    // Network first so updates arrive immediately; the cache keeps the app working offline.
+    event.respondWith(
+      fetch(request)
+        .then(response => putInCache(request, response))
+        .catch(() => caches.match(request, { ignoreSearch: true }))
+    );
+  }
 });
