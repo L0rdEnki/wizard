@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   roundScore, biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound,
-  totals, rankings, completeRound, canReopen, reopenLastRound, migrateGame
+  totals, rankings, completeRound, canReopen, reopenLastRound, migrateGame,
+  rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers
 } from '../js/rules.js';
 
 const players = ['Anna', 'Ben', 'Cleo'];
@@ -73,7 +74,8 @@ test('migrateGame converts the v1 format', () => {
     totalScores: { Anna: 130, Ben: -10, Cleo: 60 }
   };
   const game = migrateGame(old);
-  assert.equal(game.version, 2);
+  assert.equal(game.version, 3);
+  assert.deepEqual(game.settings, { noEvenBids: false, bomb: true, cloud: true });
   assert.equal(game.state, 'playing');
   assert.equal(game.rounds.length, 2);
   assert.deepEqual(game.startScores, { Anna: 100, Ben: 0, Cleo: 40 });
@@ -81,7 +83,69 @@ test('migrateGame converts the v1 format', () => {
   assert.equal(game.rounds[0].dealerIndex, 2);
   assert.equal(game.rounds[1].dealerIndex, 0);
   assert.deepEqual(game.rounds[1].tricks, { Anna: 0, Ben: 0, Cleo: 0 });
-  assert.equal(game.settings.noEvenBids, false);
   assert.equal(migrateGame(game), game);
   assert.equal(migrateGame({ ...old, state: 'archived' }).state, 'finished');
+});
+
+test('migrateGame adds special card settings to v2 games', () => {
+  const v2 = { ...createGame({ players, dealerIndex: 0, now: 1 }), version: 2, settings: { noEvenBids: true } };
+  assert.deepEqual(migrateGame(v2).settings, { noEvenBids: true, bomb: true, cloud: true });
+});
+
+test('createGame options', () => {
+  const game = createGame({ players, dealerIndex: 0, totalRounds: 5, cloud: false, now: 1 });
+  assert.equal(game.totalRounds, 5);
+  assert.deepEqual(game.settings, { noEvenBids: true, bomb: true, cloud: false });
+  assert.equal(createGame({ players, dealerIndex: 0, totalRounds: 99 }).totalRounds, 20);
+  assert.equal(createGame({ players, dealerIndex: 0, totalRounds: 0 }).totalRounds, 20);
+});
+
+// Plays rounds with the given [bids, tricks] per player (in `players` order).
+const playGame = (rounds, opts = {}) => {
+  const game = createGame({ players, dealerIndex: 0, totalRounds: rounds.length, now: 1, ...opts });
+  rounds.forEach(results => {
+    const round = currentRound(game);
+    players.forEach((p, i) => { [round.bids[p], round.tricks[p]] = results[i]; });
+    completeRound(game);
+  });
+  return game;
+};
+
+test('rescoreRound corrects an earlier round', () => {
+  const game = playGame([[[0, 0], [1, 1], [0, 0]], [[1, 1], [1, 0], [0, 1]]]);
+  assert.deepEqual(totals(game), { Anna: 50, Ben: 20, Cleo: 10 });
+  game.rounds[0].tricks.Ben = 0;
+  game.rounds[0].tricks.Anna = 1;
+  assert.ok(rescoreRound(game, 1));
+  assert.deepEqual(totals(game), { Anna: 20, Ben: -20, Cleo: 10 });
+  assert.equal(rescoreRound(game, 7), false);
+});
+
+test('scoreHistory, playerStats and awards', () => {
+  const game = playGame([[[0, 0], [1, 1], [0, 0]], [[1, 1], [1, 0], [0, 1]], [[0, 0], [2, 3], [1, 0]]],
+    { startScores: { Cleo: 10 } });
+  assert.deepEqual(scoreHistory(game).map(h => [h.roundNum, h.totals.Anna, h.totals.Ben, h.totals.Cleo]),
+    [[0, 0, 0, 10], [1, 20, 30, 30], [2, 50, 20, 20], [3, 70, 10, 10]]);
+  const stats = playerStats(game);
+  assert.deepEqual(stats.Anna, { rounds: 3, hits: 3, hitRate: 1, bestRound: 30, worstRound: 20, longestStreak: 3, avgDeviation: 0 });
+  assert.equal(stats.Ben.longestStreak, 1);
+  assert.equal(stats.Ben.worstRound, -10);
+  const byId = Object.fromEntries(awards(stats).map(a => [a.id, a]));
+  assert.deepEqual(byId.hitRate.players, ['Anna']);
+  assert.deepEqual(byId.bestRound.players, ['Anna', 'Ben']);
+  assert.deepEqual(byId.worstRound.players, ['Ben', 'Cleo']);
+  assert.deepEqual(awards(playerStats(createGame({ players, dealerIndex: 0 }))), []);
+  assert.deepEqual(awards(playerStats(playGame([[[0, 0], [0, 0], [0, 0]]]))), []);
+});
+
+test('allTimeStats and knownPlayers', () => {
+  const g1 = playGame([[[0, 0], [1, 0], [0, 1]]]);
+  // Everyone hits in g2, so all three share first place.
+  const g2 = { ...playGame([[[0, 0], [0, 0], [0, 0]]]), id: '2', timestamp: 2 };
+  const running = createGame({ players: ['Anna', 'Dora', 'Emil'], dealerIndex: 0, now: 3 });
+  const { players: table, records } = allTimeStats([g1, g2, running]);
+  assert.deepEqual(table.map(e => [e.player, e.games, e.wins, e.avgPoints]),
+    [['Anna', 2, 2, 20], ['Ben', 2, 1, 5], ['Cleo', 2, 1, 5]]);
+  assert.deepEqual(records.highScore, { value: 20, player: 'Anna', timestamp: 1 });
+  assert.deepEqual(knownPlayers([g1, g2, running]), ['Anna', 'Ben', 'Cleo', 'Dora', 'Emil']);
 });

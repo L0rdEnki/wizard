@@ -15,11 +15,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Wizard">
 
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css">
-  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
-  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
-
+  <link rel="stylesheet" href="css/tailwind.css">
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
 </head>
 <body class="bg-base-200 text-base-content min-h-screen">
   <div id="app" class="mx-auto relative min-h-screen shadow-xl bg-base-100 flex flex-col" :class="tableActive ? 'max-w-3xl' : 'max-w-md'" v-cloak>
@@ -60,8 +58,9 @@
 
       <!-- Dashboard -->
       <div v-if="currentView === 'dashboard'">
-        <div class="flex justify-center mb-6 mt-4">
+        <div class="flex flex-col items-center gap-2 mb-6 mt-4">
           <button class="btn btn-primary btn-wide shadow-lg" @click="startNewGame()">Neues Spiel starten</button>
+          <button v-if="finishedGames.length" class="btn btn-ghost btn-sm" @click="openStats">🏆 Bestenliste</button>
         </div>
 
         <h2 class="text-lg font-bold mb-3">Laufende Spiele</h2>
@@ -105,6 +104,9 @@
             <input type="text" v-model="newPlayerName" @keyup.enter="addPlayer" placeholder="Name..." class="input input-bordered flex-grow" :disabled="setupPlayers.length >= 6" />
             <button class="btn btn-primary" @click="addPlayer" :disabled="setupPlayers.length >= 6 || !newPlayerName.trim()">Hinzufügen</button>
           </div>
+          <div v-if="playerSuggestions.length && setupPlayers.length < 6" class="flex flex-wrap gap-1 mt-2">
+            <button v-for="name in playerSuggestions" :key="name" class="btn btn-xs btn-outline" @click="pushPlayer(name)">+ {{ name }}</button>
+          </div>
         </div>
 
         <ul class="bg-base-200 rounded-box w-full mb-6 divide-y divide-base-300" v-if="setupPlayers.length > 0">
@@ -130,6 +132,25 @@
           </label>
         </div>
 
+        <div class="mb-4 bg-base-200 p-4 rounded-lg border border-base-300 space-y-3">
+          <label class="flex items-center justify-between gap-3">
+            <span>
+              <span class="font-bold block">Runden</span>
+              <span class="text-xs opacity-70">Leer = volles Spiel ({{ setupMaxRounds }} Runden)</span>
+            </span>
+            <input type="number" inputmode="numeric" min="1" :max="setupMaxRounds" v-model.number="setupRounds" :placeholder="setupMaxRounds" class="input input-bordered input-sm w-20 text-center" />
+          </label>
+          <div class="font-bold">Sonderkarten (Jubiläumsedition)</div>
+          <label class="cursor-pointer flex items-center justify-between">
+            <span>💣 Bombe</span>
+            <input type="checkbox" class="toggle toggle-primary toggle-sm" v-model="bombEnabled" />
+          </label>
+          <label class="cursor-pointer flex items-center justify-between">
+            <span>☁️ Wolke</span>
+            <input type="checkbox" class="toggle toggle-primary toggle-sm" v-model="cloudEnabled" />
+          </label>
+        </div>
+
         <div v-if="setupValid" class="mb-6 bg-base-200 p-4 rounded-lg border border-base-300">
           <label class="cursor-pointer flex items-center justify-between">
             <span class="font-bold">Spiel vom Papier fortsetzen?</span>
@@ -138,8 +159,8 @@
 
           <div v-if="isPaperResume" class="mt-4 space-y-4">
             <div class="form-control">
-              <label class="label"><span class="label-text">Als nächstes dran: Runde (1–{{ setupMaxRounds }})</span></label>
-              <input type="number" inputmode="numeric" min="1" :max="setupMaxRounds" v-model.number="paperRound" class="input input-bordered w-full" />
+              <label class="label"><span class="label-text">Als nächstes dran: Runde (1–{{ setupTotalRounds }})</span></label>
+              <input type="number" inputmode="numeric" min="1" :max="setupTotalRounds" v-model.number="paperRound" class="input input-bordered w-full" />
             </div>
 
             <div class="form-control">
@@ -215,7 +236,7 @@
 
         <!-- Tricks -->
         <div v-if="currentGame.state === 'playing'">
-          <label class="cursor-pointer flex items-center justify-between mb-3 bg-base-200 p-3 rounded-lg border border-base-300">
+          <label v-if="currentGame.settings.bomb" class="cursor-pointer flex items-center justify-between mb-3 bg-base-200 p-3 rounded-lg border border-base-300">
             <span class="font-semibold">💣 Bombe gespielt <span class="text-xs opacity-70 font-normal">(ein Stich weniger)</span></span>
             <input type="checkbox" class="toggle toggle-error" :checked="round.bombPlayed" @change="toggleBomb" />
           </label>
@@ -245,7 +266,7 @@
           </div>
 
           <div class="flex gap-2">
-            <button class="btn btn-outline flex-1" @click="cloudOpen = true" :disabled="!!round.cloudUsedBy">☁️ Wolke</button>
+            <button v-if="currentGame.settings.cloud" class="btn btn-outline flex-1" @click="cloudOpen = true" :disabled="!!round.cloudUsedBy">☁️ Wolke</button>
             <button class="btn btn-primary flex-[2]" @click="finishRound" :disabled="tricksLeft !== 0">Runde auswerten</button>
           </div>
         </div>
@@ -273,8 +294,9 @@
         </div>
 
         <button class="btn btn-primary w-full btn-lg shadow-lg mb-3" @click="continueToNextRound">Nächste Runde starten</button>
-        <div class="flex gap-2 mb-4">
-          <button class="btn btn-sm btn-ghost flex-1" @click="showHistory = !showHistory">{{ showHistory ? 'Verlauf ausblenden' : 'Verlauf anzeigen' }}</button>
+        <div class="flex flex-wrap gap-2 mb-4">
+          <button class="btn btn-sm btn-ghost flex-1" :class="{ 'btn-active': showHistory }" @click="showHistory = !showHistory">📈 Verlauf</button>
+          <button class="btn btn-sm btn-ghost flex-1" :class="{ 'btn-active': showStats }" @click="showStats = !showStats">📊 Statistik</button>
           <button v-if="reopenable" class="btn btn-sm btn-ghost flex-1" @click="reopenRound">Letzte Runde korrigieren</button>
         </div>
       </div>
@@ -300,18 +322,67 @@
           </div>
         </div>
 
+        <div v-if="gameAwards.length" class="grid grid-cols-2 gap-2 mb-6 text-left">
+          <div v-for="award in gameAwards" :key="award.id" class="p-3 rounded-lg bg-base-200 border border-base-300">
+            <div class="text-xs opacity-70">{{ award.icon }} {{ award.title }}</div>
+            <div class="font-bold truncate">{{ award.players.join(', ') }}</div>
+            <div class="text-sm opacity-80">{{ award.text }}</div>
+          </div>
+        </div>
+
         <div class="flex flex-col gap-3 mb-4">
           <button class="btn btn-primary btn-lg shadow-lg w-full" @click="rematch">Revanche</button>
           <button class="btn btn-outline w-full" @click="goHome">Zur Übersicht</button>
-          <div class="flex gap-2">
-            <button class="btn btn-sm btn-ghost flex-1" @click="showHistory = !showHistory">{{ showHistory ? 'Verlauf ausblenden' : 'Verlauf anzeigen' }}</button>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn btn-sm btn-ghost flex-1" :class="{ 'btn-active': showHistory }" @click="showHistory = !showHistory">📈 Verlauf</button>
+            <button class="btn btn-sm btn-ghost flex-1" :class="{ 'btn-active': showStats }" @click="showStats = !showStats">📊 Statistik</button>
             <button v-if="reopenable" class="btn btn-sm btn-ghost flex-1" @click="reopenRound">Letzte Runde korrigieren</button>
           </div>
         </div>
       </div>
 
-      <!-- History (score + end view) -->
-      <div v-if="showHistory && currentGame && ['score', 'end'].includes(currentView)" class="overflow-x-auto bg-base-200 rounded-lg border border-base-300">
+      <!-- Statistics (score + end view) -->
+      <div v-if="showStats && currentGame && ['score', 'end'].includes(currentView)" class="overflow-x-auto bg-base-200 rounded-lg border border-base-300 mb-4">
+        <table class="table table-xs w-full text-center">
+          <thead>
+            <tr>
+              <th class="text-left">Spieler</th>
+              <th>Treffer</th>
+              <th>Serie</th>
+              <th>Beste</th>
+              <th>Schlechteste</th>
+              <th>Ø Abw.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in ranking" :key="entry.player">
+              <td class="text-left font-semibold"><span class="dot" :style="{ background: playerColor(entry.player) }"></span>{{ entry.player }}</td>
+              <td>{{ gameStats[entry.player].hits }}/{{ gameStats[entry.player].rounds }}<div class="opacity-60">{{ percent(gameStats[entry.player].hitRate) }}</div></td>
+              <td>{{ gameStats[entry.player].longestStreak }}</td>
+              <td class="text-success">{{ signed(gameStats[entry.player].bestRound) }}</td>
+              <td class="text-error">{{ signed(gameStats[entry.player].worstRound) }}</td>
+              <td>{{ gameStats[entry.player].avgDeviation.toFixed(1) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- History chart + table (score + end view) -->
+      <div v-if="showHistory && currentGame && ['score', 'end'].includes(currentView)">
+        <div v-if="chart" class="bg-base-200 rounded-lg border border-base-300 p-2 mb-3">
+          <svg :viewBox="`0 0 ${chart.width} ${chart.height}`" class="w-full h-auto" role="img" aria-label="Punkteverlauf">
+            <line :x1="chart.left" :x2="chart.right" :y1="chart.zeroY" :y2="chart.zeroY" class="chart-zero" />
+            <text v-for="label in chart.yLabels" :key="'y' + label.value" :x="chart.left - 4" :y="label.y + 3" text-anchor="end" class="chart-label">{{ label.value }}</text>
+            <text v-for="label in chart.xLabels" :key="'x' + label.value" :x="label.x" :y="chart.height - 4" text-anchor="middle" class="chart-label">Rd. {{ label.value }}</text>
+            <polyline v-for="line in chart.lines" :key="line.player" :points="line.points" fill="none" :stroke="line.color" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
+          </svg>
+          <div class="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs mt-1">
+            <span v-for="line in chart.lines" :key="line.player"><span class="dot" :style="{ background: line.color }"></span>{{ line.player }}</span>
+          </div>
+        </div>
+
+        <p class="text-xs opacity-60 mb-1">Runde antippen, um sie zu korrigieren.</p>
+        <div class="overflow-x-auto bg-base-200 rounded-lg border border-base-300">
         <table class="table table-xs table-zebra table-pin-rows w-full text-center">
           <thead>
             <tr>
@@ -324,8 +395,8 @@
               <td class="text-left">Start</td>
               <td v-for="player in currentGame.players" :key="player">{{ currentGame.startScores[player] }}</td>
             </tr>
-            <tr v-for="(r, i) in scoredRounds" :key="r.roundNum">
-              <td class="text-left">{{ r.roundNum }}<span v-if="r.bombPlayed">💣</span></td>
+            <tr v-for="(r, i) in scoredRounds" :key="r.roundNum" class="cursor-pointer hover" @click="openRoundEditor(r)">
+              <td class="text-left">{{ r.roundNum }}<span v-if="r.bombPlayed">💣</span> ✎</td>
               <td v-for="player in currentGame.players" :key="player">
                 <div class="font-bold">{{ runningTotal(i, player) }}</div>
                 <div class="opacity-60" :class="r.scores[player] > 0 ? 'text-success' : 'text-error'">{{ r.bids[player] }}/{{ r.tricks[player] }} {{ signed(r.scores[player]) }}</div>
@@ -333,6 +404,55 @@
             </tr>
           </tbody>
         </table>
+        </div>
+      </div>
+
+      <!-- All-time leaderboard -->
+      <div v-if="currentView === 'stats'">
+        <h2 class="text-2xl font-bold mb-4 text-center">🏆 Bestenliste</h2>
+        <p v-if="!allTime.players.length" class="text-center opacity-50 my-6">Noch keine beendeten Spiele.</p>
+        <template v-else>
+          <div class="overflow-x-auto bg-base-200 rounded-lg border border-base-300 mb-6">
+            <table class="table table-sm w-full text-center">
+              <thead>
+                <tr>
+                  <th class="text-left">Spieler</th>
+                  <th>Siege</th>
+                  <th>Spiele</th>
+                  <th>Ø Pkt.</th>
+                  <th>Rekord</th>
+                  <th>Treffer</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, index) in allTime.players" :key="entry.player">
+                  <td class="text-left font-semibold">{{ index + 1 }}. {{ entry.player }}</td>
+                  <td>{{ entry.wins }}<div class="text-xs opacity-60">{{ percent(entry.winRate) }}</div></td>
+                  <td>{{ entry.games }}</td>
+                  <td>{{ entry.avgPoints }}</td>
+                  <td>{{ entry.best }}</td>
+                  <td>{{ percent(entry.hitRate) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 class="font-bold mb-2">Rekorde</h3>
+          <div class="grid grid-cols-1 gap-2">
+            <div v-if="allTime.records.highScore" class="p-3 rounded-lg bg-base-200 border border-base-300">
+              <div class="text-xs opacity-70">👑 Höchster Endstand</div>
+              <div><strong>{{ allTime.records.highScore.value }}</strong> – {{ allTime.records.highScore.player }} <span class="text-xs opacity-60">({{ formatDate(allTime.records.highScore.timestamp) }})</span></div>
+            </div>
+            <div v-if="allTime.records.bestRound" class="p-3 rounded-lg bg-base-200 border border-base-300">
+              <div class="text-xs opacity-70">🚀 Beste Runde</div>
+              <div><strong>{{ signed(allTime.records.bestRound.value) }}</strong> – {{ allTime.records.bestRound.player }} <span class="text-xs opacity-60">({{ formatDate(allTime.records.bestRound.timestamp) }})</span></div>
+            </div>
+            <div v-if="allTime.records.longestStreak && allTime.records.longestStreak.value" class="p-3 rounded-lg bg-base-200 border border-base-300">
+              <div class="text-xs opacity-70">🔥 Längste Trefferserie</div>
+              <div><strong>{{ allTime.records.longestStreak.value }}</strong> – {{ allTime.records.longestStreak.player }} <span class="text-xs opacity-60">({{ formatDate(allTime.records.longestStreak.timestamp) }})</span></div>
+            </div>
+          </div>
+        </template>
       </div>
     </main>
 
@@ -386,8 +506,8 @@
         </div>
         <div class="tm-actions">
           <template v-if="currentGame.state === 'playing'">
-            <button class="btn btn-sm" :class="round.bombPlayed ? 'btn-error' : 'btn-ghost'" @click="toggleBomb">💣</button>
-            <button class="btn btn-sm btn-ghost" @click="cloudOpen = true" :disabled="!!round.cloudUsedBy">☁️</button>
+            <button v-if="currentGame.settings.bomb" class="btn btn-sm" :class="round.bombPlayed ? 'btn-error' : 'btn-ghost'" @click="toggleBomb">💣</button>
+            <button v-if="currentGame.settings.cloud" class="btn btn-sm btn-ghost" @click="cloudOpen = true" :disabled="!!round.cloudUsedBy">☁️</button>
             <button class="btn btn-sm btn-primary" @click="finishRound" :disabled="tricksLeft !== 0">Auswerten</button>
           </template>
           <button v-else class="btn btn-sm btn-primary" @click="finishBidding" :disabled="!bidsValid">Los geht's</button>
@@ -411,6 +531,40 @@
         </div>
         <div class="modal-action">
           <button class="btn" @click="cloudOpen = false">Abbrechen</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Correct a scored round -->
+    <div v-if="editor" class="modal modal-open" @click.self="editor = null">
+      <div class="modal-box max-h-[90vh]">
+        <h3 class="font-bold text-lg mb-1">Runde {{ editor.roundNum }} korrigieren</h3>
+        <label v-if="currentGame.settings.bomb" class="cursor-pointer flex items-center justify-between my-2">
+          <span>💣 Bombe gespielt</span>
+          <input type="checkbox" class="toggle toggle-error toggle-sm" v-model="editor.bombPlayed" />
+        </label>
+        <div class="text-sm mb-3" :class="editorTrickSum === editorTarget ? 'text-success' : 'text-warning'">Stiche: {{ editorTrickSum }} / {{ editorTarget }}</div>
+        <div v-if="editorForbidden" class="text-sm text-warning mb-3">⛔ Hinweis: {{ editorForbidden.player }} hätte nicht {{ editorForbidden.value }} tippen dürfen.</div>
+        <div class="space-y-3">
+          <div v-for="player in currentGame.players" :key="player" class="p-2 rounded-lg bg-base-200">
+            <div class="font-semibold mb-1">{{ player }}</div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs w-12 opacity-70">Tipp</span>
+              <div class="chip-grid flex-1">
+                <button v-for="n in editor.roundNum + 1" :key="n" class="btn btn-xs chip" :class="editor.bids[player] === n - 1 ? 'btn-primary' : 'btn-outline'" @click="editor.bids[player] = n - 1">{{ n - 1 }}</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs w-12 opacity-70">Stiche</span>
+              <div class="chip-grid flex-1">
+                <button v-for="n in editorTarget + 1" :key="n" class="btn btn-xs chip" :class="editor.tricks[player] === n - 1 ? 'btn-secondary' : 'btn-outline'" @click="editor.tricks[player] = n - 1">{{ n - 1 }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="editor = null">Abbrechen</button>
+          <button class="btn btn-primary" @click="saveRoundEdit" :disabled="editorTrickSum !== editorTarget">Speichern</button>
         </div>
       </div>
     </div>

@@ -56,6 +56,28 @@ html {
   background: hsl(var(--er) / 0.08);
 }
 
+/* Score chart */
+.dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 9999px;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+
+.chart-zero {
+  stroke: currentColor;
+  stroke-opacity: 0.3;
+  stroke-dasharray: 3 3;
+}
+
+.chart-label {
+  fill: currentColor;
+  fill-opacity: 0.6;
+  font-size: 10px;
+}
+
 /* Table mode: full-screen tiles everyone at the table can read */
 .tm {
   position: fixed;

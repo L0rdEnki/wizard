@@ -1,11 +1,12 @@
 // Bump on every deploy that changes the precached app shell.
-const CACHE_NAME = 'wizard-pwa-v2';
+const CACHE_NAME = 'wizard-pwa-v3';
 
 const APP_SHELL = [
   './',
   './index.html',
   './js/app.js',
   './js/rules.js',
+  './css/tailwind.css',
   './style.css',
   './manifest.json',
   './icons/icon.svg',
@@ -14,7 +15,7 @@ const APP_SHELL = [
 ];
 
 // Versioned CDN files never change, so they are served cache-first.
-const CDN_HOSTS = ['cdn.jsdelivr.net', 'cdn.tailwindcss.com', 'unpkg.com'];
+const CDN_HOSTS = ['unpkg.com'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
