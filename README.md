@@ -63,6 +63,7 @@ Die angezeigte URL in Safari öffnen → Teilen → „Zum Home-Bildschirm“.
 ## Hosting auf GitHub Pages
 Alle Dateien liegen im Root und nutzen relative Pfade; das gebaute CSS liegt im Repo, auf GitHub Pages ist also kein Build nötig. Repository-Einstellungen → Pages → Branch wählen, Ordner `/ (root)`. Die URL in Safari öffnen und „Zum Home-Bildschirm“ hinzufügen.
 
-Bei Änderungen an der App die Version `CACHE_NAME` in `sw.js` erhöhen. Dank network-first kommen Updates aber auch ohne das beim nächsten Öffnen mit Netz an.
+## Versionen
+Die aktuelle Version steht unten auf der Übersicht, alle Änderungen stehen im [CHANGELOG.md](CHANGELOG.md). Bei jeder Änderung an der App wird die Version in `package.json`, `js/version.js`, `sw.js` (`CACHE_NAME`) und `CHANGELOG.md` erhöht. `npm test` prüft, dass alle vier Angaben übereinstimmen. Durch die neue Version im Cache-Namen holt sich die installierte PWA beim nächsten Öffnen mit Netz die neuen Dateien.
 
 Viel Spaß beim Spielen!

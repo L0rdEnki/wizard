@@ -3,6 +3,7 @@ import {
   completeRound, canReopen, reopenLastRound, migrateGame, totalRoundsFor, clampRounds,
   rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers
 } from './rules.js';
+import { APP_VERSION } from './version.js';
 
 const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
 
@@ -426,6 +427,7 @@ createApp({
     }));
 
     return {
+      APP_VERSION,
       isLightMode,
       currentView, games, currentGame, runningGames, finishedGames, formatDate, leaderOf, totals,
       openGame, deleteGame, goHome,

@@ -1,11 +1,12 @@
-// Bump on every deploy that changes the precached app shell.
-const CACHE_NAME = 'wizard-pwa-v3';
+// Carries the app version (see CHANGELOG.md), so every release refreshes the cache.
+const CACHE_NAME = 'wizard-pwa-1.0.0';
 
 const APP_SHELL = [
   './',
   './index.html',
   './js/app.js',
   './js/rules.js',
+  './js/version.js',
   './css/tailwind.css',
   './style.css',
   './manifest.json',

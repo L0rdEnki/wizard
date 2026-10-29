@@ -35,8 +35,25 @@ There is no linter and no JS bundler.
 - `style.css` holds the hand-written styles: chips, table mode, chart, confetti. Theme colors come from daisyUI CSS variables (`hsl(var(--su))` etc.).
 - Custom class names must not collide with Tailwind utilities. A class called `table-row` once got overridden to `display: table-row`, which is why table mode uses the `tm-` prefix.
 
+## Versioning & changelog
+
+Every change that affects the app (anything a user could notice, including fixes) ships in the **same commit** with:
+1. A new entry at the top of `CHANGELOG.md`: `## [x.y.z] - YYYY-MM-DD`, written in German, using the sections Hinzugefügt / Geändert / Behoben / Entfernt.
+2. A version bump following SemVer:
+   - **Patch** for fixes and small tweaks.
+   - **Minor** for new features.
+   - **Major** when old saved games can no longer be read or the way the app is used changes fundamentally.
+
+The version lives in four places, and `tests/version.test.js` (part of `npm test`) fails if they differ:
+- `package.json` and `package-lock.json`: update both with `npm version x.y.z --no-git-tag-version`.
+- `js/version.js` (`APP_VERSION`), which the overview page displays.
+- `CACHE_NAME` in `sw.js` (`wizard-pwa-x.y.z`). A new version therefore always refreshes the offline cache.
+- The newest heading in `CHANGELOG.md`.
+
+Repo-only changes that don't touch the shipped app (CLAUDE.md, tests, tooling) get no version bump.
+
 ## Service worker / deploy
 
-- `sw.js` serves same-origin files network-first with a cache fallback and pinned CDN URLs cache-first. New app-shell files must be added to `APP_SHELL`. Bump `CACHE_NAME` when the shell changes.
+- `sw.js` serves same-origin files network-first with a cache fallback and pinned CDN URLs cache-first. New app-shell files must be added to `APP_SHELL`.
 - All paths must stay relative (`./…`) because the site is served from a GitHub Pages subpath.
 - Active development happens on the `feature-wizard-pwa-9715076361554955563` branch. `main` still has an older layout with the app in a `pwa-wizard/` subfolder.
