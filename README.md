@@ -18,6 +18,7 @@ Progressive Web App zum Mitschreiben der Punkte beim Kartenspiel „Wizard“. M
   - **Statistik**: Trefferquote, längste Serie, beste/schlechteste Runde, Ø Abweichung.
   - „Letzte Runde korrigieren“ öffnet die zuletzt gewertete Runde erneut.
 - **Tischmodus** (Knopf „Tisch“): große Kacheln für alle am Tisch, mit Punkten, Rang, Tipp, Stichen, Geber, „beginnt“ und Verbot. Stiche live mitzählen per Antippen der Kachel. Mit ⇅ wird die obere Reihe für die Gegenübersitzenden um 180° gedreht (Gerät liegt flach). Der Bildschirm bleibt an (Wake Lock, sofern unterstützt).
+- **Anzeige-Modus**: Das Tablet zeigt nur an, eingegeben wird am Handy. Im Spiel am Handy auf 📺 tippen, am Tablet „Als Anzeige verbinden“ wählen und den QR-Code vor die Selfie-Kamera halten oder den 4-stelligen Code eintippen. Die Daten gehen direkt von Gerät zu Gerät (WebRTC über PeerJS). Zum Verbinden brauchen beide Geräte Internet, am zuverlässigsten ist dasselbe WLAN.
 - **Spielende**: Ranking, Titel (z. B. „Höchste Trefferquote“, „Größter Absturz“), Konfetti, Revanche.
 - **Bestenliste**: Siege, Ø Punkte, Rekorde und Trefferquote über alle beendeten Spiele.
 - **Offline-fähig** dank Service Worker; Dark/Light Mode.

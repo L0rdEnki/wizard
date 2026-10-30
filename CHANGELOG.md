@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen am Wizard Tracker. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.1.0] - 2026-10-30
+
+### Hinzugefügt
+- **Anzeige-Modus**: Das Tablet zeigt das Spiel nur an, eine Person gibt alles am Handy ein. Gekoppelt wird per QR-Code (am Tablet öffnet sich direkt die Selfie-Kamera) oder 4-stelligem Code. Die Daten gehen direkt von Gerät zu Gerät; zum Verbinden brauchen beide Geräte Internet.
+
 ## [1.0.1] - 2026-10-30
 
 ### Geändert

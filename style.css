@@ -78,6 +78,43 @@ html {
   font-size: 10px;
 }
 
+/* Pairing a display */
+.qr-box {
+  width: min(100%, 22rem);
+  margin: 0 auto;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background: #fff; /* QR codes need a light background, also in dark mode */
+}
+
+.qr-box svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.scan-video {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  background: hsl(var(--b3));
+}
+
+.scan-video.mirrored {
+  transform: scaleX(-1);
+}
+
+.display-bar {
+  position: fixed;
+  top: max(0.5rem, env(safe-area-inset-top));
+  right: 0.5rem;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* Table mode: full-screen tiles everyone at the table can read */
 .tm {
   position: fixed;

@@ -28,6 +28,7 @@ There is no linter and no JS bundler.
 - **Save-format migrations:** `GAME_VERSION` in `rules.js`, together with `migrateGame()`, upgrades old saves on load (v1 → v2 → v3). Any change to the stored shape must bump the version, add a migration step and add a migration test. Users have real games saved on their phones.
 - **Session restore:** `wizard_session` remembers `{ view, gameId }` so the PWA reopens where it was. `tableMode`, `tableFlip` and `theme` are also kept in `localStorage`.
 - **Table mode** is a separate fixed full-screen layout in `index.html` (`.tm*` classes in `style.css`). It shares all state with the phone layout. With `tableFlip` on, the players are split into two rows and the top row is rotated 180°, keeping seats in clockwise order.
+- **Display mode** (phone controls, tablet only shows): `js/link.js` sends `{ game, view }` one way over WebRTC (PeerJS, peer id `wizard-tracker-<4-digit code>`), with pings and automatic reconnects. `js/qr.js` draws the pairing QR and scans it with the camera, selfie camera first. PeerJS and the QR libraries load from unpkg on first use only. On the tablet `displayMode` is on and `currentGame` returns the received `displayGame`, so all computeds and the table-mode tiles work unchanged and nothing is written to `games`. Any new control in the game, score or end views must be hidden with `!displayMode`. A QR code holds the app URL with `?display=<code>`; `wizard_link` keeps the phone's code across restarts.
 
 ## Styling
 

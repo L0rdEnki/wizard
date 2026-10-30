@@ -1,14 +1,17 @@
 import {
   maxBid, biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound, totals, rankings,
   completeRound, canReopen, reopenLastRound, migrateGame, totalRoundsFor, clampRounds,
-  rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers
+  rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers, GAME_VERSION
 } from './rules.js';
+import { hostLink, joinLink, linkUrl, parseLinkCode } from './link.js';
+import { qrSvg, startScanner } from './qr.js';
 import { APP_VERSION } from './version.js';
 
-const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 const STORAGE_KEY = 'wizard_games';
 const SESSION_KEY = 'wizard_session';
+const LINK_KEY = 'wizard_link';
 
 // One color per seat, readable on the dark and the light theme.
 const PLAYER_COLORS = ['#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#3b82f6', '#ef4444'];
@@ -49,7 +52,7 @@ createApp({
     watch(isLightMode, applyTheme, { immediate: true });
 
     // Games – the array is the single source of truth and is saved on every change.
-    // views: 'dashboard', 'setup', 'game', 'score', 'end', 'stats'
+    // views: 'dashboard', 'setup', 'game', 'score', 'end', 'stats', 'connect', 'display'
     const games = ref(readStorage(STORAGE_KEY, []).map(migrateGame));
     watch(games, value => writeStorage(STORAGE_KEY, value), { deep: true, immediate: true });
 
@@ -63,7 +66,12 @@ createApp({
     const currentGameId = ref(sessionGame && resumeView !== 'stats' ? sessionGame.id : null);
     watch([currentView, currentGameId], ([view, gameId]) => writeStorage(SESSION_KEY, { view, gameId }));
 
-    const currentGame = computed(() => games.value.find(g => g.id === currentGameId.value) || null);
+    // In display mode the game comes from the phone and is never written to `games`.
+    const displayMode = ref(false);
+    const displayGame = ref(null);
+    const currentGame = computed(() => displayMode.value
+      ? displayGame.value
+      : games.value.find(g => g.id === currentGameId.value) || null);
     const runningGames = computed(() => games.value.filter(g => g.state !== 'finished').reverse());
     const finishedGames = computed(() => games.value.filter(g => g.state === 'finished').reverse());
 
@@ -386,7 +394,11 @@ createApp({
     const tableFlip = ref(readStorage('tableFlip', false));
     watch(tableMode, v => writeStorage('tableMode', v));
     watch(tableFlip, v => writeStorage('tableFlip', v));
-    const tableActive = computed(() => tableMode.value && currentGame.value && ['game', 'score'].includes(currentView.value));
+    const tableActive = computed(() => {
+      if (!currentGame.value) return false;
+      if (displayMode.value) return ['game', 'score', 'end'].includes(currentView.value);
+      return tableMode.value && ['game', 'score'].includes(currentView.value);
+    });
 
     // Seats run clockwise: bottom row left→right, then the (rotated) top row right→left.
     const tableRows = computed(() => {
@@ -400,14 +412,151 @@ createApp({
       ];
     });
 
-    // Keep the screen on while the device lies on the table.
+    // Display mode, phone side: send the open game to the paired tablet on every change.
+    const linkInfo = ref(null); // { code, state }
+    const linkDialog = ref(false);
+    const linkQr = ref('');
+    let host = null;
+
+    const sendSnapshot = () => {
+      if (host) host.send(JSON.stringify({ game: currentGame.value, view: currentView.value }));
+    };
+
+    const startHost = code => {
+      host = hostLink({
+        code,
+        onStatus: info => { linkInfo.value = info; },
+        onConnect: sendSnapshot
+      });
+    };
+
+    const openLinkDialog = () => {
+      linkDialog.value = true;
+      if (!host) startHost(readStorage(LINK_KEY, null) || undefined);
+    };
+
+    const stopLink = () => {
+      if (host) host.close();
+      host = null;
+      linkInfo.value = null;
+      linkQr.value = '';
+      linkDialog.value = false;
+      try {
+        localStorage.removeItem(LINK_KEY);
+      } catch {
+        // Nothing to clean up then.
+      }
+    };
+
+    watch(() => linkInfo.value && linkInfo.value.code, async code => {
+      if (!code) return;
+      writeStorage(LINK_KEY, code);
+      try {
+        const svg = await qrSvg(linkUrl(code, location.href));
+        if (linkInfo.value && linkInfo.value.code === code) linkQr.value = svg;
+      } catch {
+        linkQr.value = ''; // The code below the QR still works.
+      }
+    });
+
+    watch([currentGame, currentView], sendSnapshot, { deep: true });
+
+    // Display mode, tablet side.
+    const displayStatus = ref('connecting');
+    const displayOutdated = ref(false);
+    let join = null;
+
+    const applySnapshot = ({ game, view }) => {
+      if (displayMode.value === false) return;
+      displayOutdated.value = Boolean(game && game.version > GAME_VERSION);
+      if (displayOutdated.value) return;
+      const valid = game && Array.isArray(game.players) && Array.isArray(game.rounds);
+      displayGame.value = valid ? migrateGame(game) : null;
+      currentView.value = valid && ['game', 'score', 'end'].includes(view) ? view : 'display';
+      showHistory.value = ['score', 'end'].includes(currentView.value);
+    };
+
+    const enterDisplay = code => {
+      stopLink();
+      displayMode.value = true;
+      displayGame.value = null;
+      currentGameId.value = null;
+      currentView.value = 'display';
+      window.history.replaceState(null, '', linkUrl(code, location.href));
+      join = joinLink(code, {
+        onStatus: status => { displayStatus.value = status; },
+        onSnapshot: applySnapshot
+      });
+    };
+
+    const leaveDisplay = () => {
+      if (join) join.close();
+      join = null;
+      displayMode.value = false;
+      displayGame.value = null;
+      displayOutdated.value = false;
+      showHistory.value = false;
+      currentView.value = 'dashboard';
+      window.history.replaceState(null, '', location.pathname);
+    };
+
+    // Pairing screen on the tablet: the camera opens right away, selfie camera first.
+    const scanVideo = ref(null);
+    const cameraFacing = ref('user');
+    const cameraError = ref('');
+    const connectCode = ref('');
+    const connectError = ref('');
+    let stopScanner = null;
+
+    const stopCamera = () => {
+      if (stopScanner) stopScanner();
+      stopScanner = null;
+    };
+
+    const startCamera = async () => {
+      stopCamera();
+      cameraError.value = '';
+      try {
+        const stop = await startScanner(scanVideo.value, enterDisplay, cameraFacing.value);
+        if (currentView.value === 'connect') stopScanner = stop;
+        else stop();
+      } catch {
+        cameraError.value = 'Kamera nicht verfügbar. Du kannst den Code vom Handy unten eintippen.';
+      }
+    };
+
+    const openConnect = async () => {
+      connectCode.value = '';
+      connectError.value = '';
+      currentView.value = 'connect';
+      await nextTick();
+      startCamera();
+    };
+
+    const switchCamera = () => {
+      cameraFacing.value = cameraFacing.value === 'user' ? 'environment' : 'user';
+      startCamera();
+    };
+
+    const submitConnectCode = () => {
+      const code = parseLinkCode(connectCode.value);
+      if (code) enterDisplay(code);
+      else connectError.value = 'Bitte den 4-stelligen Code vom Handy eingeben.';
+    };
+
+    watch(currentView, view => {
+      if (view !== 'connect') stopCamera();
+    });
+
+    // Keep the screen on while the device lies on the table or feeds a display.
+    const keepAwake = computed(() => Boolean(tableActive.value || displayMode.value || linkInfo.value));
     let wakeLock = null;
     const syncWakeLock = async () => {
       try {
-        if (tableActive.value && document.visibilityState === 'visible' && !wakeLock && 'wakeLock' in navigator) {
+        if (keepAwake.value && document.visibilityState === 'visible' && !wakeLock && 'wakeLock' in navigator) {
           wakeLock = await navigator.wakeLock.request('screen');
           wakeLock.addEventListener('release', () => { wakeLock = null; });
-        } else if (!tableActive.value && wakeLock) {
+        } else if (!keepAwake.value && wakeLock) {
           await wakeLock.release();
           wakeLock = null;
         }
@@ -415,10 +564,19 @@ createApp({
         wakeLock = null;
       }
     };
-    watch(tableActive, syncWakeLock);
+    watch(keepAwake, syncWakeLock);
     onMounted(() => {
-      document.addEventListener('visibilitychange', syncWakeLock);
+      document.addEventListener('visibilitychange', () => {
+        syncWakeLock();
+        if (host && document.visibilityState === 'visible') host.resume();
+      });
       syncWakeLock();
+
+      // Opened through a scanned link, or reloaded while being a display.
+      const startCode = parseLinkCode(location.href);
+      const linkCode = readStorage(LINK_KEY, null);
+      if (startCode) enterDisplay(startCode);
+      else if (linkCode && currentGame.value) startHost(linkCode); // Phone restarted: the tablet reconnects by itself.
     });
 
     const confetti = Array.from({ length: 50 }, () => ({
@@ -445,6 +603,9 @@ createApp({
       editor, openRoundEditor, editorTarget, editorTrickSum, editorForbidden, saveRoundEdit,
       allTime, openStats,
       tableMode, tableFlip, tableActive, tableRows,
+      linkInfo, linkDialog, linkQr, openLinkDialog, stopLink,
+      displayMode, displayStatus, displayOutdated, leaveDisplay,
+      scanVideo, cameraFacing, cameraError, connectCode, connectError, openConnect, switchCamera, submitConnectCode,
       confetti
     };
   }
