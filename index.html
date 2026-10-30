@@ -30,7 +30,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
         </div>
-        <div class="flex-1 px-2 text-xl font-bold">Wizard Tracker</div>
+        <div class="flex-1 min-w-0 px-1 text-lg font-bold whitespace-nowrap">Wizard<span :class="{ 'hidden min-[420px]:inline': currentGame }"> Tracker</span></div>
         <div class="flex-none gap-1">
           <button v-if="currentGame && ['game', 'score'].includes(currentView)" class="btn btn-ghost btn-sm" @click="tableMode = !tableMode" :aria-pressed="tableMode">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="12" rx="2"/><path stroke-linecap="round" d="M8 21h8M12 17v4"/></svg>
@@ -215,12 +215,13 @@
             </span>
           </div>
 
-          <div v-if="forbidden" class="alert mb-3 text-sm py-2" :class="bidsValid ? 'alert-warning' : 'alert-error'">
-            <span>⛔ <strong>{{ forbidden.player }}</strong> darf nicht <strong>{{ forbidden.value }}</strong> tippen{{ bidsValid ? '' : ' – bitte ändern!' }}</span>
+          <div v-if="forbidden" class="forbid-banner mb-3" :class="{ 'forbid-alarm': !bidsValid }">
+            <div class="forbid-title">⛔ {{ forbidden.player }} darf nicht {{ forbidden.value }} tippen</div>
+            <div class="text-sm">{{ bidsValid ? `Sonst würden die Tipps genau aufgehen (${numCards} ${numCards === 1 ? 'Karte' : 'Karten'}).` : 'Die Tipps gehen gerade auf – bitte ändern!' }}</div>
           </div>
 
           <div class="space-y-3 mb-6">
-            <div v-for="(player, index) in orderedPlayers" :key="player" class="p-3 bg-base-200 rounded-lg border" :class="!bidsValid && forbidden.player === player ? 'border-error' : 'border-base-300'">
+            <div v-for="(player, index) in orderedPlayers" :key="player" class="p-3 bg-base-200 rounded-lg border" :class="forbidden && forbidden.player === player ? 'forbid-row' : 'border-base-300'">
               <div class="flex items-center justify-between mb-2">
                 <span class="font-semibold text-lg truncate">
                   {{ player }}
@@ -234,6 +235,7 @@
                         :class="[round.bids[player] === n - 1 ? 'btn-primary' : 'btn-outline', isForbidden(player, n - 1) && 'chip-forbidden']"
                         :disabled="isForbidden(player, n - 1)" @click="setBid(player, n - 1)">{{ n - 1 }}</button>
               </div>
+              <div v-if="forbidden && forbidden.player === player" class="forbid-note">⛔ Darf nicht {{ forbidden.value }} tippen</div>
             </div>
           </div>
 
@@ -493,7 +495,7 @@
         <div v-for="player in row.players" :key="player" class="tile"
              :class="[
                'tile-' + (currentGame.state === 'playing' ? trickState(player) : 'bid'),
-               { 'tile-error': currentGame.state === 'bidding' && !bidsValid && forbidden.player === player, 'tile-tap': currentGame.state === 'playing' && !displayMode }
+               { 'tile-forbid': currentGame.state === 'bidding' && forbidden && forbidden.player === player, 'tile-error': currentGame.state === 'bidding' && !bidsValid && forbidden.player === player, 'tile-tap': currentGame.state === 'playing' && !displayMode }
              ]"
              @click="currentGame.state === 'playing' && !displayMode && addTrick(player)">
           <div class="tile-head">
@@ -516,7 +518,7 @@
             <button v-if="!displayMode" class="btn btn-circle btn-sm btn-ghost" @click.stop="removeTrick(player)" aria-label="Stich abziehen">−</button>
           </div>
 
-          <div v-if="currentGame.state === 'bidding' && forbidden && forbidden.player === player" class="tile-forbidden">⛔ darf nicht {{ forbidden.value }} tippen</div>
+          <div v-if="currentGame.state === 'bidding' && forbidden && forbidden.player === player" class="tile-forbidden">⛔ Darf nicht {{ forbidden.value }} tippen</div>
         </div>
       </section>
 
@@ -527,7 +529,7 @@
           <template v-if="currentGame.state === 'bidding'">
             <span>Tipps {{ bidSum }}/{{ numCards }}</span>
             <span>{{ orderedPlayers[0] }} beginnt</span>
-            <span v-if="forbidden" class="text-error font-bold">⛔ {{ forbidden.player }} nicht {{ forbidden.value }}</span>
+            <span v-if="forbidden" class="forbid-pill">⛔ {{ forbidden.player }} nicht {{ forbidden.value }}</span>
           </template>
           <template v-else>
             <span :class="tricksLeft === 0 ? 'text-success' : ''">Stiche {{ trickSum }}/{{ trickTarget }}</span>

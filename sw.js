@@ -1,5 +1,5 @@
 // Carries the app version (see CHANGELOG.md), so every release refreshes the cache.
-const CACHE_NAME = 'wizard-pwa-1.1.0';
+const CACHE_NAME = 'wizard-pwa-1.1.1';
 
 const APP_SHELL = [
   './',

@@ -49,11 +49,63 @@ html {
   font-size: 1rem;
 }
 
-.chip-forbidden:disabled {
+.btn.chip-forbidden:disabled {
   text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  font-weight: 800;
+  color: hsl(var(--erc));
+  border-color: hsl(var(--er));
+  background: hsl(var(--er));
+  opacity: 1;
+}
+
+/* The bid the last player may not make must be impossible to overlook */
+.forbid-banner {
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  text-align: center;
+  color: hsl(var(--erc));
+  background: hsl(var(--er));
+}
+
+.forbid-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.forbid-row {
+  border-width: 2px;
+  border-color: hsl(var(--er));
+  background: hsl(var(--er) / 0.1);
+}
+
+.forbid-note {
+  margin-top: 0.5rem;
+  font-weight: 800;
   color: hsl(var(--er));
-  border-color: hsl(var(--er) / 0.4);
-  background: hsl(var(--er) / 0.08);
+}
+
+.forbid-pill {
+  padding: 0 0.6em;
+  border-radius: 9999px;
+  font-weight: 800;
+  color: hsl(var(--erc));
+  background: hsl(var(--er));
+}
+
+.forbid-alarm,
+.tile-error {
+  animation: forbid-pulse 1s ease-in-out infinite;
+}
+
+@keyframes forbid-pulse {
+  50% { box-shadow: 0 0 0 0.35rem hsl(var(--er) / 0.45); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forbid-alarm,
+  .tile-error { animation: none; }
 }
 
 /* Score chart */
@@ -161,7 +213,7 @@ html {
 .tile-tap:active { background: hsl(var(--b3)); }
 .tile-hit { border-color: hsl(var(--su)); }
 .tile-over, .tile-miss { border-color: hsl(var(--er)); }
-.tile-error { border-color: hsl(var(--er)); background: hsl(var(--er) / 0.1); }
+.tile-forbid, .tile-error { border-color: hsl(var(--er)); background: hsl(var(--er) / 0.1); }
 
 .tile-head {
   display: flex;
@@ -218,9 +270,13 @@ html {
 }
 
 .tile-forbidden {
-  font-weight: 700;
-  color: hsl(var(--er));
-  font-size: clamp(0.85rem, 2.4vmin, 1.25rem);
+  padding: 0.3em 0.5em;
+  border-radius: 0.5rem;
+  text-align: center;
+  font-weight: 800;
+  color: hsl(var(--erc));
+  background: hsl(var(--er));
+  font-size: clamp(1rem, 3.6vmin, 2rem);
 }
 
 .tm-bar {

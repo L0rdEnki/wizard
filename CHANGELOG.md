@@ -2,6 +2,14 @@
 
 Alle nennenswerten Änderungen am Wizard Tracker. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.1.1] - 2026-10-30
+
+### Geändert
+- Die verbotene Zahl des letzten Spielers ist deutlich stärker hervorgehoben: großes rotes Banner, roter Rahmen und Hinweis direkt beim Spieler, rot gefüllter Knopf. Gehen die Tipps gerade auf, blinkt die Warnung. Das gilt auch im Tischmodus und auf der Anzeige.
+
+### Behoben
+- Der Titel brach auf dem Handy seit dem 📺-Knopf in zwei Zeilen um. Auf schmalen Bildschirmen steht im Spiel jetzt nur noch „Wizard“.
+
 ## [1.1.0] - 2026-10-30
 
 ### Hinzugefügt
