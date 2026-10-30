@@ -2,6 +2,11 @@
 
 Alle nennenswerten Änderungen am Wizard Tracker. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.0.1] - 2026-10-30
+
+### Geändert
+- Tipps sind jetzt bis Kartenzahl + 1 möglich (z. B. 0 bis 4 in Runde 3), auch im Tischmodus, mit der Wolke und beim Korrigieren einer Runde. Die Stiche bleiben auf die Kartenzahl begrenzt.
+
 ## [1.0.0] - 2026-10-29
 
 Erste versionierte Ausgabe mit allem, was bis hierhin entstanden ist.

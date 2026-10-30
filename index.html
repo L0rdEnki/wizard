@@ -226,7 +226,7 @@
                 <span class="text-sm opacity-70 shrink-0">{{ currentTotals[player] }} Pkt.</span>
               </div>
               <div class="chip-grid">
-                <button v-for="n in numCards + 1" :key="n" class="btn btn-sm chip"
+                <button v-for="n in bidLimit + 1" :key="n" class="btn btn-sm chip"
                         :class="[round.bids[player] === n - 1 ? 'btn-primary' : 'btn-outline', isForbidden(player, n - 1) && 'chip-forbidden']"
                         :disabled="isForbidden(player, n - 1)" @click="setBid(player, n - 1)">{{ n - 1 }}</button>
               </div>
@@ -528,7 +528,7 @@
           <div v-for="player in orderedPlayers" :key="player" class="flex items-center justify-between gap-2">
             <span class="font-semibold flex-1 truncate">{{ player }} <span class="opacity-60 text-sm">(Tipp {{ round.bids[player] }})</span></span>
             <button class="btn btn-sm btn-outline" @click="useCloud(player, -1)" :disabled="round.bids[player] === 0">−1</button>
-            <button class="btn btn-sm btn-outline" @click="useCloud(player, 1)" :disabled="round.bids[player] === numCards">+1</button>
+            <button class="btn btn-sm btn-outline" @click="useCloud(player, 1)" :disabled="round.bids[player] >= bidLimit">+1</button>
           </div>
         </div>
         <div class="modal-action">
@@ -553,7 +553,7 @@
             <div class="flex items-center gap-2 mb-1">
               <span class="text-xs w-12 opacity-70">Tipp</span>
               <div class="chip-grid flex-1">
-                <button v-for="n in editor.roundNum + 1" :key="n" class="btn btn-xs chip" :class="editor.bids[player] === n - 1 ? 'btn-primary' : 'btn-outline'" @click="editor.bids[player] = n - 1">{{ n - 1 }}</button>
+                <button v-for="n in maxBid(editor.roundNum) + 1" :key="n" class="btn btn-xs chip" :class="editor.bids[player] === n - 1 ? 'btn-primary' : 'btn-outline'" @click="editor.bids[player] = n - 1">{{ n - 1 }}</button>
               </div>
             </div>
             <div class="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import {
-  biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound, totals, rankings,
+  maxBid, biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound, totals, rankings,
   completeRound, canReopen, reopenLastRound, migrateGame, totalRoundsFor, clampRounds,
   rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers
 } from './rules.js';
@@ -168,6 +168,7 @@ createApp({
     // Current round
     const round = computed(() => currentGame.value && currentRound(currentGame.value));
     const numCards = computed(() => round.value ? round.value.roundNum : 0);
+    const bidLimit = computed(() => maxBid(numCards.value));
     const dealer = computed(() => round.value ? currentGame.value.players[round.value.dealerIndex] : '');
     const orderedPlayers = computed(() => round.value ? biddingOrder(currentGame.value.players, round.value.dealerIndex) : []);
     const currentTotals = computed(() => currentGame.value ? totals(currentGame.value) : {});
@@ -184,7 +185,7 @@ createApp({
     const isForbidden = (player, value) => Boolean(forbidden.value && forbidden.value.player === player && forbidden.value.value === value);
 
     const setBid = (player, value) => {
-      if (value >= 0 && value <= numCards.value && !isForbidden(player, value)) {
+      if (value >= 0 && value <= bidLimit.value && !isForbidden(player, value)) {
         round.value.bids[player] = value;
       }
     };
@@ -265,7 +266,7 @@ createApp({
     const cloudOpen = ref(false);
     const useCloud = (player, dir) => {
       const value = round.value.bids[player] + dir;
-      if (value < 0 || value > numCards.value) return;
+      if (value < 0 || value > bidLimit.value) return;
       round.value.bids[player] = value;
       round.value.cloudUsedBy = { player, dir };
       cloudOpen.value = false;
@@ -434,7 +435,7 @@ createApp({
       newPlayerName, setupPlayers, noEvenBids, bombEnabled, cloudEnabled, setupRounds, setupTotalRounds,
       isPaperResume, paperRound, paperDealerIndex, paperScores, playerSuggestions,
       setupMaxRounds, setupValid, startNewGame, pushPlayer, addPlayer, removePlayer, movePlayer, initGame,
-      round, numCards, dealer, orderedPlayers, currentTotals, ranking, rankOf,
+      round, numCards, bidLimit, maxBid, dealer, orderedPlayers, currentTotals, ranking, rankOf,
       bidSum, forbidden, bidsValid, isForbidden, setBid, stepBid, finishBidding,
       trickTarget, trickSum, tricksLeft, maxTricksFor, setTricks, addTrick, removeTrick, toggleBomb, trickState,
       cloudOpen, useCloud, undoCloud, finishRound,

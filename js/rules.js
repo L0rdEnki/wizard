@@ -11,6 +11,9 @@ export const totalRoundsFor = playerCount => Math.floor(60 / playerCount);
 export const roundScore = (bid, tricks) =>
   bid === tricks ? 20 + tricks * 10 : -Math.abs(bid - tricks) * 10;
 
+// Bids may go one above the card count, even though that many tricks can't be won.
+export const maxBid = numCards => numCards + 1;
+
 // Players in bidding/playing order: the player left of the dealer starts.
 export const biddingOrder = (players, dealerIndex) =>
   players.map((_, i) => players[mod(dealerIndex + 1 + i, players.length)]);

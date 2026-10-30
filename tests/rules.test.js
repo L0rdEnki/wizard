@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  roundScore, biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound,
+  roundScore, maxBid, biddingOrder, forbiddenBid, expectedTricks, createGame, currentRound,
   totals, rankings, completeRound, canReopen, reopenLastRound, migrateGame,
   rescoreRound, scoreHistory, playerStats, awards, allTimeStats, knownPlayers
 } from '../js/rules.js';
@@ -13,6 +13,11 @@ test('roundScore', () => {
   assert.equal(roundScore(3, 3), 50);
   assert.equal(roundScore(2, 0), -20);
   assert.equal(roundScore(0, 3), -30);
+});
+
+test('maxBid allows one bid above the card count', () => {
+  assert.equal(maxBid(3), 4);
+  assert.equal(roundScore(4, 3), -10);
 });
 
 test('biddingOrder starts left of the dealer', () => {
